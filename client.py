@@ -27,9 +27,9 @@ class Cache:
 
 
 class KVClient:
-    def __init__(self):
+    def __init__(self, port_):
         # 指向中间件服务器
-        self.channel = grpc.insecure_channel('localhost:50003')
+        self.channel = grpc.insecure_channel(f'localhost:{port_}')
         self.stub = keyvalue_pb2_grpc.MiddleWareServiceStub(self.channel)
         self.cache = Cache()
 
@@ -57,12 +57,39 @@ class KVClient:
         return response.result
 
 
-if __name__ == '__main__':
-    client = KVClient()
-    client.set_value("example_key", "example_value")  # 写入数据
-    value = client.get_value("example_key")  # 从缓存读取数据
-    print("Get Response:", value)
+# 交互式客户端 需要传入中间件服务器地址
+def ClientStart(port):
+    client = KVClient(50003)
+    help_text = """
+        Commands Help:
+        set key value —— Generate/Modify (key, value)
+        get key —— Query (key, value) by the key
+        del key —— Delete (key, value) by the key
+        """
 
-    client.del_value("example_key")  # 删除数据
-    deleted_value = client.get_value("example_key")  # 尝试从缓存读取已删除的数据
-    print("Get Response after delete:", deleted_value)
+    while True:
+        command = input("Enter command: ").split()  # 等待用户输入并将其拆分为列表
+        if not command:
+            continue
+        if command[0] == "quit" or command[0] == "exit":  # 如果用户输入“退出”或“完毕”，则退出程序
+            break
+        if command[0] == "help":  # 如果用户输入"help"，打印命令帮助
+            print(help_text)
+            continue
+        if len(command) < 2:
+            print("Invalid command.")
+            continue
+        if command[0] == "set":
+            if len(command) != 3:
+                print("Invalid command. Usage: set key value")
+                continue
+            _, key, value = command
+            print(client.set_value(key, value))
+        elif command[0] == "get":
+            _, key = command
+            print(client.get_value(key))
+        elif command[0] == "del":
+            _, key = command
+            print(client.del_value(key))
+        else:
+            print("Invalid command.")

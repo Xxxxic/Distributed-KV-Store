@@ -4,11 +4,6 @@ import keyvalue_pb2
 import keyvalue_pb2_grpc
 
 
-# 简单的用户验证逻辑，实际中应使用更安全的方式
-# def authenticate(username, password):
-#     return (username == "user" and password == "password") or (username == "user1" and password == "password1") or (username == "user2" and password == "password2") or (username == "user3" and password == "password3")
-
-
 class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
     def __init__(self):
         self.data = {}
