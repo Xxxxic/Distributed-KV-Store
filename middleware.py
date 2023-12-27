@@ -4,6 +4,7 @@ import keyvalue_pb2_grpc
 from concurrent import futures
 import hashlib
 
+
 # 一致性哈希
 class ConsistentHash:
     def __init__(self, nodes):

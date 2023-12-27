@@ -9,7 +9,7 @@ import keyvalue_pb2_grpc
 #     return (username == "user" and password == "password") or (username == "user1" and password == "password1") or (username == "user2" and password == "password2") or (username == "user3" and password == "password3")
 
 
-class KeyValueServicer(keyvalue_pb2_grpc.KVServiceServicer):
+class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
     def __init__(self):
         self.data = {}
 
@@ -32,7 +32,7 @@ class KeyValueServicer(keyvalue_pb2_grpc.KVServiceServicer):
 # 通过指定端口启动服务器
 def serverStart(port):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    keyvalue_pb2_grpc.add_KVServiceServicer_to_server(KeyValueServicer(), server)
+    keyvalue_pb2_grpc.add_KVServiceServicer_to_server(KVServicer(), server)
     server.add_insecure_port(f'localhost:{port}')
     server.start()
     print(f"Server started at port {port}")

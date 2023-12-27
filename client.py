@@ -1,81 +1,68 @@
-# import grpc
-# import keyvalue_pb2
-# import keyvalue_pb2_grpc
-# import threading
-#
-#
-# def set_get_delete_client(username, password):
-#     channel = grpc.insecure_channel('localhost:50051')
-#     stub = keyvalue_pb2_grpc.KeyValueServiceStub(channel)
-#
-#     # Set 操作
-#     set_request = keyvalue_pb2.SetRequest(key=f"key-{username}", value=f"value-{username}", username=username, password=password)
-#     response = stub.Set(set_request)
-#     print(f"Set Response for {username}: {response}")
-#
-#     # Get 操作
-#     get_request = keyvalue_pb2.GetRequest(key=f"key-{username}", username=username, password=password)
-#     response = stub.Get(get_request)
-#     print(f"Get Response for {username}: {response.value}")
-#
-#     # Delete 操作
-#     delete_request = keyvalue_pb2.DeleteRequest(key=f"key-{username}", username=username, password=password)
-#     response = stub.Delete(delete_request)
-#     print(f"Delete Response for {username}: {response.success}")
-#
-#     # 再次尝试 Get 操作，检查是否成功删除
-#     response = stub.Get(get_request)
-#     print(f"Get Response after deletion for {username}: {response.value}")
-#
-# def run_multiple_clients():
-#     # 模拟三个节点，分别用不同的用户名和密码
-#     usernames = ["user1", "user2", "user3"]
-#     passwords = ["password1", "password2", "password3"]
-#
-#     threads = []
-#     for i in range(3):
-#         thread = threading.Thread(target=set_get_delete_client, args=(usernames[i], passwords[i]))
-#         threads.append(thread)
-#         thread.start()
-#
-#     for thread in threads:
-#         thread.join()
-#
-# if __name__ == '__main__':
-#     run_multiple_clients()
-
-
 import grpc
 import keyvalue_pb2
 import keyvalue_pb2_grpc
 
-def run():
-    channel = grpc.insecure_channel('localhost:50053')
-    stub = keyvalue_pb2_grpc.MiddleWareServiceStub(channel)
+from datetime import datetime, timedelta
 
-    request = keyvalue_pb2.Request(key="example_key", value="example_value", operation="Set")
-    response = stub.RouteRequest(request)
-    print("Set Response:", response)
 
-    request = keyvalue_pb2.Request(key="example_key", operation="Get")
-    response = stub.RouteRequest(request)
-    print("Get Response:", response.result)
+# 用户数据缓存层
+class Cache:
+    def __init__(self):
+        self.cache = {}
+        self.cache_expiry = {}
 
-def run1():
-    channel = grpc.insecure_channel('localhost:50003')
-    stub = keyvalue_pb2_grpc.MiddleWareServiceStub(channel)
+    def get_from_cache(self, key):
+        if key in self.cache and datetime.now() < self.cache_expiry[key]:
+            return self.cache[key]
+        return None
 
-    request_set = keyvalue_pb2.Request(key="example_key", value="example_value", operation="Set")
-    response_set = stub.RouteRequest(request_set)
-    print("Set Response:", response_set.result)
+    def set_cache(self, key, value, ttl=30):
+        self.cache[key] = value
+        self.cache_expiry[key] = datetime.now() + timedelta(seconds=ttl)
 
-    request_get = keyvalue_pb2.Request(key="example_key", operation="Get")
-    response_get = stub.RouteRequest(request_get)
-    print("Get Response:", response_get.result)
+    def delete_from_cache(self, key):
+        if key in self.cache:
+            del self.cache[key]
+            del self.cache_expiry[key]
 
-    request_delete = keyvalue_pb2.Request(key="example_key", operation="Delete")
-    response_delete = stub.RouteRequest(request_delete)
-    print("Delete Response:", response_delete.result)
+
+class KVClient:
+    def __init__(self):
+        # 指向中间件服务器
+        self.channel = grpc.insecure_channel('localhost:50003')
+        self.stub = keyvalue_pb2_grpc.MiddleWareServiceStub(self.channel)
+        self.cache = Cache()
+
+    def set_value(self, key, value):
+        response = self.stub.RouteRequest(keyvalue_pb2.Request(key=key, value=value, operation="Set"))
+        self.cache.set_cache(key, value)  # 更新本地缓存
+        return response.result
+
+    def get_value(self, key):
+        cached_value = self.cache.get_from_cache(key)
+        if cached_value:
+            print(f"Get from cache: {cached_value} ")
+            return cached_value
+
+        response = self.stub.RouteRequest(keyvalue_pb2.Request(key=key, operation="Get"))
+        if response.result:
+            self.cache.set_cache(key, response.result)  # 缓存获取的值
+            print(f"Get from server: {response.result} ")
+        return response.result
+
+    def del_value(self, key):
+        response = self.stub.RouteRequest(keyvalue_pb2.Request(key=key, operation="Delete"))
+        if response.result == "Delete operation success":
+            self.cache.delete_from_cache(key)  # 仅当删除成功时才删除本地缓存
+        return response.result
+
 
 if __name__ == '__main__':
-    run1()
+    client = KVClient()
+    client.set_value("example_key", "example_value")  # 写入数据
+    value = client.get_value("example_key")  # 从缓存读取数据
+    print("Get Response:", value)
+
+    client.del_value("example_key")  # 删除数据
+    deleted_value = client.get_value("example_key")  # 尝试从缓存读取已删除的数据
+    print("Get Response after delete:", deleted_value)
