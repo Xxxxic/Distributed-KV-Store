@@ -5,7 +5,68 @@ import grpc
 import keyvalue_pb2 as keyvalue__pb2
 
 
-class KeyValueServiceStub(object):
+class MiddleWareServiceStub(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.RouteRequest = channel.unary_unary(
+                '/MiddleWareService/RouteRequest',
+                request_serializer=keyvalue__pb2.Request.SerializeToString,
+                response_deserializer=keyvalue__pb2.Response.FromString,
+                )
+
+
+class MiddleWareServiceServicer(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def RouteRequest(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_MiddleWareServiceServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'RouteRequest': grpc.unary_unary_rpc_method_handler(
+                    servicer.RouteRequest,
+                    request_deserializer=keyvalue__pb2.Request.FromString,
+                    response_serializer=keyvalue__pb2.Response.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'MiddleWareService', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+
+
+ # This class is part of an EXPERIMENTAL API.
+class MiddleWareService(object):
+    """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def RouteRequest(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/MiddleWareService/RouteRequest',
+            keyvalue__pb2.Request.SerializeToString,
+            keyvalue__pb2.Response.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+
+class KVServiceStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -15,23 +76,23 @@ class KeyValueServiceStub(object):
             channel: A grpc.Channel.
         """
         self.Set = channel.unary_unary(
-                '/KeyValueService/Set',
-                request_serializer=keyvalue__pb2.SetRequest.SerializeToString,
-                response_deserializer=keyvalue__pb2.SetResponse.FromString,
+                '/KVService/Set',
+                request_serializer=keyvalue__pb2.Request.SerializeToString,
+                response_deserializer=keyvalue__pb2.Response.FromString,
                 )
         self.Get = channel.unary_unary(
-                '/KeyValueService/Get',
-                request_serializer=keyvalue__pb2.GetRequest.SerializeToString,
-                response_deserializer=keyvalue__pb2.GetResponse.FromString,
+                '/KVService/Get',
+                request_serializer=keyvalue__pb2.Request.SerializeToString,
+                response_deserializer=keyvalue__pb2.Response.FromString,
                 )
         self.Delete = channel.unary_unary(
-                '/KeyValueService/Delete',
-                request_serializer=keyvalue__pb2.DeleteRequest.SerializeToString,
-                response_deserializer=keyvalue__pb2.DeleteResponse.FromString,
+                '/KVService/Delete',
+                request_serializer=keyvalue__pb2.Request.SerializeToString,
+                response_deserializer=keyvalue__pb2.Response.FromString,
                 )
 
 
-class KeyValueServiceServicer(object):
+class KVServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def Set(self, request, context):
@@ -53,31 +114,31 @@ class KeyValueServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
 
-def add_KeyValueServiceServicer_to_server(servicer, server):
+def add_KVServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'Set': grpc.unary_unary_rpc_method_handler(
                     servicer.Set,
-                    request_deserializer=keyvalue__pb2.SetRequest.FromString,
-                    response_serializer=keyvalue__pb2.SetResponse.SerializeToString,
+                    request_deserializer=keyvalue__pb2.Request.FromString,
+                    response_serializer=keyvalue__pb2.Response.SerializeToString,
             ),
             'Get': grpc.unary_unary_rpc_method_handler(
                     servicer.Get,
-                    request_deserializer=keyvalue__pb2.GetRequest.FromString,
-                    response_serializer=keyvalue__pb2.GetResponse.SerializeToString,
+                    request_deserializer=keyvalue__pb2.Request.FromString,
+                    response_serializer=keyvalue__pb2.Response.SerializeToString,
             ),
             'Delete': grpc.unary_unary_rpc_method_handler(
                     servicer.Delete,
-                    request_deserializer=keyvalue__pb2.DeleteRequest.FromString,
-                    response_serializer=keyvalue__pb2.DeleteResponse.SerializeToString,
+                    request_deserializer=keyvalue__pb2.Request.FromString,
+                    response_serializer=keyvalue__pb2.Response.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'KeyValueService', rpc_method_handlers)
+            'KVService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
  # This class is part of an EXPERIMENTAL API.
-class KeyValueService(object):
+class KVService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
@@ -91,9 +152,9 @@ class KeyValueService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/KeyValueService/Set',
-            keyvalue__pb2.SetRequest.SerializeToString,
-            keyvalue__pb2.SetResponse.FromString,
+        return grpc.experimental.unary_unary(request, target, '/KVService/Set',
+            keyvalue__pb2.Request.SerializeToString,
+            keyvalue__pb2.Response.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -108,9 +169,9 @@ class KeyValueService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/KeyValueService/Get',
-            keyvalue__pb2.GetRequest.SerializeToString,
-            keyvalue__pb2.GetResponse.FromString,
+        return grpc.experimental.unary_unary(request, target, '/KVService/Get',
+            keyvalue__pb2.Request.SerializeToString,
+            keyvalue__pb2.Response.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -125,8 +186,8 @@ class KeyValueService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/KeyValueService/Delete',
-            keyvalue__pb2.DeleteRequest.SerializeToString,
-            keyvalue__pb2.DeleteResponse.FromString,
+        return grpc.experimental.unary_unary(request, target, '/KVService/Delete',
+            keyvalue__pb2.Request.SerializeToString,
+            keyvalue__pb2.Response.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
