@@ -60,7 +60,7 @@ class KVClient:
 
         response = self.stub.RouteRequest(keyvalue_pb2.Request(key=key, operation="Get"))
         if response.result:
-            self.cache.set_cache(key, response, response.version, ttl=20)
+            self.cache.set_cache(key, response.result, response.version)
             # print(f"Get from server: {response.result}")
         return response.result, "server"
 
@@ -129,7 +129,7 @@ def ClientStart(port):
             print(help_text)
             continue
         if len(command) < 2:
-            print("Invalid command.")
+            print("Invalid command. Please type 'help' to get help.")
             continue
         if command[0] == "set":
             if len(command) != 3:
@@ -150,4 +150,4 @@ def ClientStart(port):
             for key in keys:
                 print(client.del_value(key))
         else:
-            print("Invalid command.")
+            print("Invalid command. Please type 'help' to get help.")

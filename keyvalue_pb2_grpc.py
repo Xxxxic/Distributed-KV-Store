@@ -90,6 +90,11 @@ class KVServiceStub(object):
                 request_serializer=keyvalue__pb2.Request.SerializeToString,
                 response_deserializer=keyvalue__pb2.Response.FromString,
                 )
+        self.BackupData = channel.unary_unary(
+                '/KVService/BackupData',
+                request_serializer=keyvalue__pb2.Request.SerializeToString,
+                response_deserializer=keyvalue__pb2.Response.FromString,
+                )
 
 
 class KVServiceServicer(object):
@@ -113,6 +118,12 @@ class KVServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def BackupData(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_KVServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -128,6 +139,11 @@ def add_KVServiceServicer_to_server(servicer, server):
             ),
             'Delete': grpc.unary_unary_rpc_method_handler(
                     servicer.Delete,
+                    request_deserializer=keyvalue__pb2.Request.FromString,
+                    response_serializer=keyvalue__pb2.Response.SerializeToString,
+            ),
+            'BackupData': grpc.unary_unary_rpc_method_handler(
+                    servicer.BackupData,
                     request_deserializer=keyvalue__pb2.Request.FromString,
                     response_serializer=keyvalue__pb2.Response.SerializeToString,
             ),
@@ -187,6 +203,23 @@ class KVService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/KVService/Delete',
+            keyvalue__pb2.Request.SerializeToString,
+            keyvalue__pb2.Response.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def BackupData(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/KVService/BackupData',
             keyvalue__pb2.Request.SerializeToString,
             keyvalue__pb2.Response.FromString,
             options, channel_credentials,

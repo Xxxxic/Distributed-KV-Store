@@ -2,13 +2,31 @@ import grpc
 from concurrent import futures
 import keyvalue_pb2
 import keyvalue_pb2_grpc
-
+import threading
 
 
 class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
-    def __init__(self):
+    def __init__(self, backup_server_address):
         self.data = {}
         self.versions = {}  # 添加版本信息的存储
+        self.backup_server_address = backup_server_address
+        print("backup server: ", end='')
+        for i in backup_server_address:
+            print(i + '  ')
+
+    def sync_to_backup(self, operation, key, value=None, version=None):
+        # 连接到备份服务器，并执行同步请求
+        for address in self.backup_server_address:
+            print(f"Syncing data to backup server: {address}")
+            self._sync_worker(address, operation, key, value, version)
+
+    def _sync_worker(self, address, operation, key, value, version):
+        with grpc.insecure_channel(address) as channel:
+            stub = keyvalue_pb2_grpc.KVServiceStub(channel)
+            response = stub.BackupData(
+                keyvalue_pb2.Request(operation=operation, key=key, value=value, version=version)
+            )
+            print(f'Synced data to backup server: {address}, response: {response.result}')
 
     def Set(self, request, context):
         current_version = self.versions.get(request.key, 0)
@@ -16,10 +34,14 @@ class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
         # 版本不匹配，拒绝写入
         if request.version != current_version:
             print(f"Server Current version: {current_version}")
-            return keyvalue_pb2.Response(result="Version mismatch, please try again", version = current_version)
+            return keyvalue_pb2.Response(result="Version mismatch, please try again", version=current_version)
 
         self.data[request.key] = request.value
         self.versions[request.key] = request.version + 1  # 更新版本号
+
+        # 向备份节点同步数据
+        self.sync_to_backup("Set", request.key, request.value, self.versions[request.key])
+
         return keyvalue_pb2.Response(result="Set operation success", version=self.versions[request.key])
 
     def Get(self, request, context):
@@ -30,16 +52,20 @@ class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
         if request.key in self.data:
             del self.data[request.key]
             del self.versions[request.key]
+
+            # 将数据同步到备份服务器
+            self.sync_to_backup("Delete", request.key, version=self.versions[request.key])
+
             return keyvalue_pb2.Response(result="Delete operation success")
         else:
             return keyvalue_pb2.Response(result="Key not found for delete operation")
 
 
 # 通过指定端口启动服务器
-def serverStart(port):
+# 启动时传入启动端口、备份节点地址 注意是list
+def serverStart(port, backup_add: list):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    keyvalue_pb2_grpc.add_KVServiceServicer_to_server(KVServicer(), server)
+    keyvalue_pb2_grpc.add_KVServiceServicer_to_server(KVServicer(backup_add), server)
     server.add_insecure_port(f'localhost:{port}')
     server.start()
-    print(f"Server started at port {port}")
     server.wait_for_termination()

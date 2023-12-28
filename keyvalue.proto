@@ -8,13 +8,14 @@ service KVService {
     rpc Set(Request) returns (Response) {}
     rpc Get(Request) returns (Response) {}
     rpc Delete(Request) returns (Response) {}
+    rpc BackupData(Request) returns (Response) {}
 }
 
 message Request {
     string key = 1;
     string value = 2;
     string operation = 3;
-    uint64 version = 4; // 添加版本信息
+    uint64 version = 4;     // 添加版本信息
 }
 
 message Response {
