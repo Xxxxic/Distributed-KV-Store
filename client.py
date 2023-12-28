@@ -27,10 +27,14 @@ class Cache:
             return self.cache[key]
         return None
 
-    def set_cache(self, key, value, version, ttl=30):
+    def set_cache(self, key, value, version, ttl):
         self.cache[key] = value
         self.version[key] = version
-        self.cache_expiry[key] = datetime.now() + self.cache_ttl  # 设置缓存过期时间
+        # 设置缓存过期时间
+        if ttl:
+            self.cache_expiry[key] = datetime.now() + timedelta(seconds=ttl)
+        else:
+            self.cache_expiry[key] = datetime.now() + self.cache_ttl
 
     def delete_from_cache(self, key):
         if key in self.cache:
@@ -51,14 +55,14 @@ class KVClient:
     def get_value(self, key):
         cached_value = self.cache.get_value_from_cache(key)
         if cached_value:
-            print(f"Get from cache: {cached_value}")
-            return cached_value
+            # print(f"Get from cache: {cached_value.result}")
+            return cached_value, "cache"
 
         response = self.stub.RouteRequest(keyvalue_pb2.Request(key=key, operation="Get"))
         if response.result:
-            self.cache.set_cache(key, response, response.version, ttl=30)
-            print(f"Get from server: {response.result}")
-        return response.result
+            self.cache.set_cache(key, response, response.version, ttl=20)
+            # print(f"Get from server: {response.result}")
+        return response.result, "server"
 
     # Set：直接发起set请求
     # 先检查缓存中的版本信息。
@@ -68,7 +72,7 @@ class KVClient:
         # 重试机制
         while retries > 0:
             version = self.cache.get_version_from_cache(key) if self.cache.get_version_from_cache(key) else 0
-            print(f"Current version: {version}")
+            # print(f"Current version: {version}")
             response = self.stub.RouteRequest(
                 keyvalue_pb2.Request(key=key, value=value, operation="Set", version=version))
 
@@ -78,7 +82,7 @@ class KVClient:
 
             if response.result != "Version mismatch, please try again":
                 # 版本匹配或者数据同步后，写入缓存
-                self.cache.set_cache(key, value, response.version, ttl=30)
+                self.cache.set_cache(key, value, response.version, ttl=10)
                 return response.result  # 返回结果
 
             # 退让策略
@@ -86,9 +90,8 @@ class KVClient:
             time.sleep(0.1 * retries)
 
             # 版本不匹配，重新获取最新的版本信息
-            response = self.stub.RouteRequest(keyvalue_pb2.Request(key=key, operation="Get"))
             print("Get latest version from server: ", response.version)
-            self.cache.set_cache(key, response, response.version, ttl=30)  # 重新设置缓存
+            self.cache.set_cache(key, response.result, response.version, ttl=10)  # 重新设置缓存
 
         # 重试次数用完，返回错误信息
         return response.result
@@ -135,10 +138,16 @@ def ClientStart(port):
             _, key, value = command
             print(client.set_value(key, value))
         elif command[0] == "get":
-            _, keys = command
-            print(client.get_value(key))
+            keys = command[1:]
+            for key in keys:
+                get_result = client.get_value(key)
+                if (get_result[0] == ""):
+                    print(f'{key} : Not exist     [ Get from {get_result[1]} ]')
+                else:
+                    print(f'{key} : {get_result[0]}     [ Get from {get_result[1]} ]')
         elif command[0] == "del":
-            _, key = command
-            print(client.del_value(key))
+            keys = command[1:]
+            for key in keys:
+                print(client.del_value(key))
         else:
             print("Invalid command.")
