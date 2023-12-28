@@ -29,16 +29,19 @@ class MiddlewareServer(keyvalue_pb2_grpc.MiddleWareServiceServicer):
         channel = grpc.insecure_channel(f'{node}')
         stub = keyvalue_pb2_grpc.KVServiceStub(channel)
 
+        # 将版本信息传递给数据节点
         if request.operation == 'Set':
-            response = stub.Set(keyvalue_pb2.Request(key=request.key, value=request.value, operation="Set"))
+            response = stub.Set(
+                keyvalue_pb2.Request(key=request.key, value=request.value, operation="Set", version=request.version))
         elif request.operation == 'Get':
-            response = stub.Get(keyvalue_pb2.Request(key=request.key, operation="Get"))
+            response = stub.Get(keyvalue_pb2.Request(key=request.key, operation="Get", version=request.version))
         elif request.operation == 'Delete':
-            response = stub.Delete(keyvalue_pb2.Request(key=request.key, operation="Delete"))
+            response = stub.Delete(keyvalue_pb2.Request(key=request.key, operation="Delete", version=request.version))
         else:
-            response = keyvalue_pb2.Response(result="Invalid operation")
+            response = keyvalue_pb2.Response(result="Invalid operation", version=request.version)
 
-        return response
+        # 返回响应时包含版本信息
+        return keyvalue_pb2.Response(result=response.result, version=response.version)
 
 
 # 传入数据节点地址和中间件服务器端口，启动中间件服务器

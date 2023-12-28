@@ -14,8 +14,10 @@ message Request {
     string key = 1;
     string value = 2;
     string operation = 3;
+    uint64 version = 4; // 添加版本信息
 }
 
 message Response {
     string result = 1;
+    uint64 version = 2; // 添加版本信息
 }
