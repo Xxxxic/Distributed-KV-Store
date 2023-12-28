@@ -14,7 +14,7 @@ class BackupServer(keyvalue_pb2_grpc.KVServiceServicer):
     # 如果是Delete操作，则删除数据和版本信息
     # 如果是Get操作，则返回 无效操作
     def BackupData(self, request, context):
-        # print(request)
+        print(request)
         if request.operation == 'Set':
             self.backup_data[request.key] = request.value
             self.backup_versions[request.key] = request.version

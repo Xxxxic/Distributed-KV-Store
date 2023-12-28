@@ -27,7 +27,7 @@ class Cache:
             return self.cache[key]
         return None
 
-    def set_cache(self, key, value, version, ttl):
+    def set_cache(self, key, value, version, ttl=10):
         self.cache[key] = value
         self.version[key] = version
         # 设置缓存过期时间

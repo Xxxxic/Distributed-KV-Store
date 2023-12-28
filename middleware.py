@@ -1,3 +1,4 @@
+import random
 import grpc
 import keyvalue_pb2
 import keyvalue_pb2_grpc
@@ -45,9 +46,26 @@ class MiddlewareServer(keyvalue_pb2_grpc.MiddleWareServiceServicer):
     # 路由请求
     def RouteRequest(self, request, context):
         primary_node = self.hash.route(request.key)
-        print(f"Route request to primary node {primary_node}")
-        # 尝试连接主节点
+
+        # 如果是Get请求，则支持路由到备份服务器，使得负载均衡
+        if request.operation == 'Get':
+            backup_node_list = self.node_backup_map[primary_node]
+            # 随机从备份节点中选择一个节点
+            backup_node = backup_node_list[random.randint(0, len(backup_node_list) - 1)]
+            print(f"Route request to primary node {backup_node}")
+            try:
+                channel = grpc.insecure_channel(f'{backup_node}')
+                stub = keyvalue_pb2_grpc.KVServiceStub(channel)
+                # 转发请求到备份节点
+                response = self._forward_request(stub, request)
+                # 返回备份节点响应
+                return keyvalue_pb2.Response(result=response.result, version=response.version)
+            except grpc.RpcError as e:
+                print(f"Backup node {backup_node} is down. Unable to process the request.")
+
+        # 其他操作类型的处理
         try:
+            print(f"Route request to primary node {primary_node}")
             channel = grpc.insecure_channel(f'{primary_node}')
             stub = keyvalue_pb2_grpc.KVServiceStub(channel)
             # 转发请求

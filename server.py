@@ -50,11 +50,11 @@ class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
 
     def Delete(self, request, context):
         if request.key in self.data:
+            # 将数据同步到备份服务器
+            self.sync_to_backup(operation="Delete", key=request.key, version=self.versions[request.key])
+
             del self.data[request.key]
             del self.versions[request.key]
-
-            # 将数据同步到备份服务器
-            self.sync_to_backup("Delete", request.key, version=self.versions[request.key])
 
             return keyvalue_pb2.Response(result="Delete operation success")
         else:
