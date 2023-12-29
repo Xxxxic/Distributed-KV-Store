@@ -49,6 +49,14 @@ class KVClient:
         self.stub = keyvalue_pb2_grpc.MiddleWareServiceStub(self.channel)
         self.cache = Cache()
 
+    # GetAll：直接发起getall请求
+    def get_all(self):
+        response = self.stub.RouteGetAllData(keyvalue_pb2.Request(operation="GetAll"))
+        # print(response)
+        data_map = response.data  # 获取返回的 map 数据
+
+        return data_map
+
     # Get
     # 先从本地缓存取，如果本地缓存存在且未过期，则直接返回；
     # 否则在服务器上检索这个键值对，并将新的不过期键值对 和 新版本信息 保存到缓存中。
@@ -114,8 +122,9 @@ def ClientStart(port):
     client = KVClient(50003)
     help_text = """
         Commands Help:
-        set key value —— Generate/Modify (key, value)
+        getall —— Get all (key, value) pairs
         get key —— Query (key, value) by the key
+        set key value —— Generate/Modify (key, value)
         del key —— Delete (key, value) by the key
         """
 
@@ -128,10 +137,13 @@ def ClientStart(port):
         if command[0] == "help":  # 如果用户输入"help"，打印命令帮助
             print(help_text)
             continue
-        if len(command) < 2:
-            print("Invalid command. Please type 'help' to get help.")
-            continue
-        if command[0] == "set":
+        if command[0] == "getall":
+            result = client.get_all()
+            # 遍历 map
+            for key, value in result.items():
+                print(f'{key} : {value.value}')
+            # print(result)
+        elif command[0] == "set":
             if len(command) != 3:
                 print("Invalid command. Usage: set key value")
                 continue
@@ -141,7 +153,9 @@ def ClientStart(port):
             keys = command[1:]
             for key in keys:
                 get_result = client.get_value(key)
-                if (get_result[0] == ""):
+                if get_result[0] == "All nodes are down":
+                    print("All nodes are down! Please contact the administrator.")
+                elif (get_result[0] == ""):
                     print(f'{key} : Not exist     [ Get from {get_result[1]} ]')
                 else:
                     print(f'{key} : {get_result[0]}     [ Get from {get_result[1]} ]')

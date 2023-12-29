@@ -14,11 +14,11 @@ class BackupServer(keyvalue_pb2_grpc.KVServiceServicer):
     # 如果是Delete操作，则删除数据和版本信息
     # 如果是Get操作，则返回 无效操作
     def BackupData(self, request, context):
-        print(request)
+        # print(request)
         if request.operation == 'Set':
             self.backup_data[request.key] = request.value
             self.backup_versions[request.key] = request.version
-            print(f'Backup Server Backup Data: {request.key} - {request.value}')
+            print(f'Backup Data    {request.key} : {request.value}')
             return keyvalue_pb2.Response(result="Backup success")
         elif request.operation == 'Delete':
             if request.key in self.backup_data:
@@ -43,6 +43,18 @@ class BackupServer(keyvalue_pb2_grpc.KVServiceServicer):
         else:
             print("Backup Server Get Value: Key not found")
             return keyvalue_pb2.Response(result="Key not found in backup")
+
+    # 在备份服务器中提供GetAll服务
+    def GetAll(self, request, context):
+        # 注意这里不能直接转发，应该转换成对应的 Map：Entry 格式
+        entries = {}
+        for key, value in self.backup_data.items():
+            print(f"{key}: {value}")
+            # 添加 AllDataResponse.Entry 条目
+            entries[key] = keyvalue_pb2.AllDataResponse.Entry(value=value, version=self.backup_versions[key])
+
+        # 返回 AllDataResponse
+        return keyvalue_pb2.AllDataResponse(data=entries)
 
     def Set(self, request, context):
         print("Backup Server: Invalid operation")

@@ -2,11 +2,13 @@ syntax = "proto3";
 
 service MiddleWareService {
     rpc RouteRequest(Request) returns (Response) {}
+    rpc RouteGetAllData(Request) returns (AllDataResponse) {}
 }
 
 service KVService {
     rpc Set(Request) returns (Response) {}
     rpc Get(Request) returns (Response) {}
+    rpc GetAll(Request) returns (AllDataResponse) {}
     rpc Delete(Request) returns (Response) {}
     rpc BackupData(Request) returns (Response) {}
 }
@@ -21,4 +23,13 @@ message Request {
 message Response {
     string result = 1;
     uint64 version = 2; // 添加版本信息
+}
+
+message AllDataResponse {
+    map<string, Entry> data = 1;
+
+    message Entry {
+        string value = 1;
+        uint64 version = 2;
+    }
 }

@@ -60,6 +60,23 @@ class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
         else:
             return keyvalue_pb2.Response(result="Key not found for delete operation")
 
+    def GetAll(self, request, context):
+        # 注意这里不能直接转发，应该转换成对应的 Map：Entry 格式
+        entries = {}
+        for key, value in self.data.items():
+            print(f"{key}: {value}")
+            # 添加 AllDataResponse.Entry 条目
+            entries[key] = keyvalue_pb2.AllDataResponse.Entry(value=value, version=self.versions[key])
+
+        print("get all data: ", end='')
+        print(entries)
+
+        # 返回 AllDataResponse
+        return keyvalue_pb2.AllDataResponse(data=entries)
+
+        # return keyvalue_pb2.AllDataResponse(data={key: {"value": value, "version": version} for key, value, version in
+        #                                           zip(self.data.keys(), self.data.values(), self.versions.values())})
+
 
 # 通过指定端口启动服务器
 # 启动时传入启动端口、备份节点地址 注意是list

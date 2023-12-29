@@ -19,12 +19,23 @@ class MiddleWareServiceStub(object):
                 request_serializer=keyvalue__pb2.Request.SerializeToString,
                 response_deserializer=keyvalue__pb2.Response.FromString,
                 )
+        self.RouteGetAllData = channel.unary_unary(
+                '/MiddleWareService/RouteGetAllData',
+                request_serializer=keyvalue__pb2.Request.SerializeToString,
+                response_deserializer=keyvalue__pb2.AllDataResponse.FromString,
+                )
 
 
 class MiddleWareServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def RouteRequest(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RouteGetAllData(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -37,6 +48,11 @@ def add_MiddleWareServiceServicer_to_server(servicer, server):
                     servicer.RouteRequest,
                     request_deserializer=keyvalue__pb2.Request.FromString,
                     response_serializer=keyvalue__pb2.Response.SerializeToString,
+            ),
+            'RouteGetAllData': grpc.unary_unary_rpc_method_handler(
+                    servicer.RouteGetAllData,
+                    request_deserializer=keyvalue__pb2.Request.FromString,
+                    response_serializer=keyvalue__pb2.AllDataResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -65,6 +81,23 @@ class MiddleWareService(object):
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
+    @staticmethod
+    def RouteGetAllData(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/MiddleWareService/RouteGetAllData',
+            keyvalue__pb2.Request.SerializeToString,
+            keyvalue__pb2.AllDataResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
 
 class KVServiceStub(object):
     """Missing associated documentation comment in .proto file."""
@@ -84,6 +117,11 @@ class KVServiceStub(object):
                 '/KVService/Get',
                 request_serializer=keyvalue__pb2.Request.SerializeToString,
                 response_deserializer=keyvalue__pb2.Response.FromString,
+                )
+        self.GetAll = channel.unary_unary(
+                '/KVService/GetAll',
+                request_serializer=keyvalue__pb2.Request.SerializeToString,
+                response_deserializer=keyvalue__pb2.AllDataResponse.FromString,
                 )
         self.Delete = channel.unary_unary(
                 '/KVService/Delete',
@@ -107,6 +145,12 @@ class KVServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def Get(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetAll(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -136,6 +180,11 @@ def add_KVServiceServicer_to_server(servicer, server):
                     servicer.Get,
                     request_deserializer=keyvalue__pb2.Request.FromString,
                     response_serializer=keyvalue__pb2.Response.SerializeToString,
+            ),
+            'GetAll': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAll,
+                    request_deserializer=keyvalue__pb2.Request.FromString,
+                    response_serializer=keyvalue__pb2.AllDataResponse.SerializeToString,
             ),
             'Delete': grpc.unary_unary_rpc_method_handler(
                     servicer.Delete,
@@ -188,6 +237,23 @@ class KVService(object):
         return grpc.experimental.unary_unary(request, target, '/KVService/Get',
             keyvalue__pb2.Request.SerializeToString,
             keyvalue__pb2.Response.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetAll(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/KVService/GetAll',
+            keyvalue__pb2.Request.SerializeToString,
+            keyvalue__pb2.AllDataResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
