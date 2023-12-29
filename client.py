@@ -117,6 +117,21 @@ class KVClient:
         return response.result
 
 
+import readline
+
+
+# 自定义补全方法
+def complete(text, state):
+    commands = ["get", "set", "del", "getall", "help", "quit", "exit"]  # 命令列表
+    options = [cmd for cmd in commands if cmd.startswith(text)]
+    return options[state] if state < len(options) else None
+
+
+readline.parse_and_bind("tab: complete")  # 使用Tab键进行补全
+readline.set_completer(complete)  # 设置补全方法
+
+history = []  # 存储历史命令
+
 help_text = """
         Commands Help:
         getall —— Get all (key, value) pairs
@@ -125,6 +140,7 @@ help_text = """
         del key —— Delete (key, value) by the key
         """
 
+
 # 交互式客户端 需要传入中间件服务器地址
 def ClientStart(port):
     client = KVClient(50003)
@@ -132,6 +148,7 @@ def ClientStart(port):
     while True:
         # 用readline获取输入
         cmd = input("> ")
+        history.append(cmd)  # 将命令添加到历史记录
 
         command = cmd.split()  # 将命令拆分为列表
         if not command:
@@ -144,6 +161,9 @@ def ClientStart(port):
 
         if command[0].lower() == "getall":
             result = client.get_all()
+            if len(result) == 0:
+                print("No data found")
+                continue
             # 遍历 map
             for key, value in result.items():
                 print(f'{key} : {value.value}')

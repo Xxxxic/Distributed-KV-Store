@@ -73,17 +73,22 @@ class MiddlewareServer(keyvalue_pb2_grpc.MiddleWareServiceServicer):
                 random_node = node_list[idx]
                 try:
                     nodeSource = "Primary Node" if random_node == primary_node else "Backup Node"
-                    print(f"Route GetAll request to node: {random_node}   [{nodeSource}]")
+                    print(f"Route GetAll request to {random_node}   [{nodeSource}]")
                     channel = grpc.insecure_channel(f'{random_node}')
                     stub = keyvalue_pb2_grpc.KVServiceStub(channel)
                     response = self._forward_request(stub, request)
+
+                    print("=====================================")
+                    # 返回节点响应
                     return keyvalue_pb2.AllDataResponse(data=response.data)
                 except grpc.RpcError as e:
                     print(f"Node {random_node} is down. Try to switch to other node...")
             print("All nodes are down. Unable to process the request.")
+            print("=====================================")
             return keyvalue_pb2.AllDataResponse(data={"All nodes are down": "Unable to process the request."})
         else:
             print(f"Invalid operation: {request.operation}")
+            print("=====================================")
             return keyvalue_pb2.AllDataResponse(data={"Invalid operation": "Unable to process the request."})
 
     # 路由请求
@@ -107,16 +112,18 @@ class MiddlewareServer(keyvalue_pb2_grpc.MiddleWareServiceServicer):
                 random_node = node_list[idx]
                 try:
                     nodeSource = "Primary Node" if random_node == primary_node else "Backup Node"
-                    print(f"Route request to node: {random_node}   [{nodeSource}]")
+                    print(f"Route {request.operation} request to {random_node}   [{nodeSource}]")
                     channel = grpc.insecure_channel(f'{random_node}')
                     stub = keyvalue_pb2_grpc.KVServiceStub(channel)
                     # 转发请求
                     response = self._forward_request(stub, request)
+                    print("=====================================")
                     # 返回节点响应
                     return keyvalue_pb2.Response(result=response.result, version=response.version)
                 except grpc.RpcError as e:
                     print(f"Node {random_node} is down. Try to switch to other node...")
             print("All nodes are down. Unable to process the request.")
+            print("=====================================")
             return keyvalue_pb2.Response(result="All nodes are down", version=request.version)
         # Set/Del请求：只能在主节点处理，如果节点宕机，则返回提示
         elif request.operation == 'Set' or request.operation == 'Delete':
@@ -126,25 +133,46 @@ class MiddlewareServer(keyvalue_pb2_grpc.MiddleWareServiceServicer):
                 stub = keyvalue_pb2_grpc.KVServiceStub(channel)
                 # 转发请求
                 response = self._forward_request(stub, request)
+                print("=====================================")
                 # 返回主节点响应
                 return keyvalue_pb2.Response(result=response.result, version=response.version)
             except grpc.RpcError as e:
                 print(f"Primary node {primary_node} is down. Unable to process the request.")
+                print("=====================================")
                 return keyvalue_pb2.Response(result="Primary node is down. Unable to process the request.")
         else:
             print(f"Invalid operation: {request.operation}")
             # GetAll请求只能调用RouteGetAllData服务
             if request.operation == 'GetAll':
                 print("Please call RouteGetAllData service to get all data.")
+            print("=====================================")
             return keyvalue_pb2.Response(result="Invalid operation", version=request.version)
 
 
 # 启动中间件服务器
 # 传入: 字典：{ 数据节点地址 : 备份节点list },  中间件服务器端口
 def serverStart(nodes_, port_):
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    keyvalue_pb2_grpc.add_MiddleWareServiceServicer_to_server(MiddlewareServer(nodes_), server)
-    server.add_insecure_port(f'localhost:{port_}')
-    server.start()
-    print(f"Middleware Server started at port {port_}")
-    server.wait_for_termination()
+    print("=====================================")
+    print("Starting Middleware Server ...")
+    try:
+        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        keyvalue_pb2_grpc.add_MiddleWareServiceServicer_to_server(MiddlewareServer(nodes_), server)
+        server.add_insecure_port(f'localhost:{port_}')
+        server.start()
+        print(f"Middleware Server started at port {port_}")
+        # 取出主从节点分别打印
+        print()
+        pNode = nodes_.keys()
+        for p in pNode:
+            print(f"Primary: {p}")
+            for b in nodes_[p]:
+                print(f"    Backup: {b}")
+        print()
+        print("Middleware Server Start Success!")
+        print("=====================================")
+        server.wait_for_termination()
+    except Exception as e:
+        print("Error: ", e)
+        print("Middleware Server Start Failed!")
+        print("=====================================")
+        return False

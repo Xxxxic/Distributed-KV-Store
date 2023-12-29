@@ -32,4 +32,5 @@ message AllDataResponse {
         string value = 1;
         uint64 version = 2;
     }
+    uint64 version = 2; // 总版本信息
 }
