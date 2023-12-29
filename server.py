@@ -1,11 +1,10 @@
 import grpc
 from concurrent import futures
-import keyvalue_pb2
-import keyvalue_pb2_grpc
-import threading
+from lib import kvstore_pb2
+from lib import kvstore_pb2_grpc
 
 
-class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
+class KVServicer(kvstore_pb2_grpc.KVServiceServicer):
     def __init__(self, backup_server_address):
         self.data = {}
         self.versions = {}  # 添加版本信息的存储
@@ -17,7 +16,6 @@ class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
         # 执行一次轮询，获取最新版本信息
         self.GetLatestVersionData()
 
-
     # 启动时轮询其他节点，获取最新版本信息
     def GetLatestVersionData(self):
         print("Try to get latest Data ...")
@@ -25,8 +23,8 @@ class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
         for address in self.backup_server_address:
             try:
                 with grpc.insecure_channel(address) as channel:
-                    stub = keyvalue_pb2_grpc.KVServiceStub(channel)
-                    response = stub.GetAll(keyvalue_pb2.Request(operation="GetAll"))
+                    stub = kvstore_pb2_grpc.KVServiceStub(channel)
+                    response = stub.GetAll(kvstore_pb2.Request(operation="GetAll"))
                     # print(response.version)
                     # print(self.totalVersion)
                     if response.version > self.totalVersion:
@@ -44,9 +42,9 @@ class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
         # 遍历所有备份服务器
         for address in self.backup_server_address:
             with grpc.insecure_channel(address) as channel:
-                stub = keyvalue_pb2_grpc.KVServiceStub(channel)
+                stub = kvstore_pb2_grpc.KVServiceStub(channel)
                 response = stub.BackupData(
-                    keyvalue_pb2.Request(operation=operation, key=key, value=value, version=version)
+                    kvstore_pb2.Request(operation=operation, key=key, value=value, version=version)
                 )
                 print(f'Backup to {address}, response: {response.result}')
 
@@ -57,7 +55,7 @@ class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
         if request.version != current_version:
             # print(f"Server Current version: {current_version}")
             print("Set operation failed: Version mismatch, please try again")
-            return keyvalue_pb2.Response(result="Version mismatch, please try again", version=current_version)
+            return kvstore_pb2.Response(result="Version mismatch, please try again", version=current_version)
 
         self.data[request.key] = request.value
         self.versions[request.key] = request.version + 1  # 更新版本号
@@ -70,13 +68,13 @@ class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
 
         print("Set operation success")
         print("=====================================")
-        return keyvalue_pb2.Response(result="Set operation success", version=self.versions[request.key])
+        return kvstore_pb2.Response(result="Set operation success", version=self.versions[request.key])
 
     def Get(self, request, context):
         value = self.data.get(request.key, "")
         print("Get operation success")
         print("=====================================")
-        return keyvalue_pb2.Response(result=value, version=self.versions.get(request.key, 0))
+        return kvstore_pb2.Response(result=value, version=self.versions.get(request.key, 0))
 
     def Delete(self, request, context):
         if request.key in self.data:
@@ -90,11 +88,11 @@ class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
 
             print("Delete operation success")
             print("=====================================")
-            return keyvalue_pb2.Response(result="Delete operation success")
+            return kvstore_pb2.Response(result="Delete operation success")
         else:
             print("Delete operation failed: Key not found")
             print("=====================================")
-            return keyvalue_pb2.Response(result="Key not found for delete operation")
+            return kvstore_pb2.Response(result="Key not found for delete operation")
 
     def GetAll(self, request, context):
         # 注意这里不能直接转发，应该转换成对应的 Map：Entry 格式
@@ -102,7 +100,7 @@ class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
         for key, value in self.data.items():
             # print(f"{key}: {value}")
             # 添加 AllDataResponse.Entry 条目
-            entries[key] = keyvalue_pb2.AllDataResponse.Entry(value=value, version=self.versions[key])
+            entries[key] = kvstore_pb2.AllDataResponse.Entry(value=value, version=self.versions[key])
 
         # print("get all data: ", end='')
         # print(entries)
@@ -110,7 +108,7 @@ class KVServicer(keyvalue_pb2_grpc.KVServiceServicer):
         print("=====================================")
 
         # 返回 AllDataResponse
-        return keyvalue_pb2.AllDataResponse(data=entries, version=self.totalVersion)
+        return kvstore_pb2.AllDataResponse(data=entries, version=self.totalVersion)
 
 
 # 通过指定端口启动服务器
@@ -120,7 +118,7 @@ def serverStart(port, backup_add: list):
     print("Server Start ...")
     try:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        keyvalue_pb2_grpc.add_KVServiceServicer_to_server(KVServicer(backup_add), server)
+        kvstore_pb2_grpc.add_KVServiceServicer_to_server(KVServicer(backup_add), server)
         server.add_insecure_port(f'localhost:{port}')
         server.start()
         print(f"Server start at port: {port}")

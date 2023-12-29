@@ -1,7 +1,7 @@
 import random
 import grpc
-import keyvalue_pb2
-import keyvalue_pb2_grpc
+from lib import kvstore_pb2
+from lib import kvstore_pb2_grpc
 from concurrent import futures
 import hashlib
 
@@ -20,7 +20,7 @@ class ConsistentHash:
 
 
 # 中间件服务器
-class MiddlewareServer(keyvalue_pb2_grpc.MiddleWareServiceServicer):
+class MiddlewareServer(kvstore_pb2_grpc.MiddleWareServiceServicer):
     def __init__(self, node_map_):
         # 备份节点信息
         self.node_backup_map = node_map_
@@ -32,7 +32,7 @@ class MiddlewareServer(keyvalue_pb2_grpc.MiddleWareServiceServicer):
     # 消息转发
     def _forward_request(self, stub, request):
         if request.operation == 'GetAll':
-            response = stub.GetAll(keyvalue_pb2.Request(operation="GetAll"))
+            response = stub.GetAll(kvstore_pb2.Request(operation="GetAll"))
 
             # print(response.data)
             # 注意这里还不能直接转发MAP ，应该转换成对应的 Map：Entry 格式
@@ -40,21 +40,21 @@ class MiddlewareServer(keyvalue_pb2_grpc.MiddleWareServiceServicer):
             for key, value in response.data.items():
                 # print(f"{key}: {value}")
                 # 添加 AllDataResponse.Entry 条目
-                entries[key] = keyvalue_pb2.AllDataResponse.Entry(value=value.value, version=value.version)
+                entries[key] = kvstore_pb2.AllDataResponse.Entry(value=value.value, version=value.version)
 
-            return keyvalue_pb2.AllDataResponse(data=entries)
+            return kvstore_pb2.AllDataResponse(data=entries)
 
         if request.operation == 'Set':
             response = stub.Set(
-                keyvalue_pb2.Request(key=request.key, value=request.value, operation="Set", version=request.version))
+                kvstore_pb2.Request(key=request.key, value=request.value, operation="Set", version=request.version))
         elif request.operation == 'Get':
-            response = stub.Get(keyvalue_pb2.Request(key=request.key, operation="Get", version=request.version))
+            response = stub.Get(kvstore_pb2.Request(key=request.key, operation="Get", version=request.version))
         elif request.operation == 'Delete':
-            response = stub.Delete(keyvalue_pb2.Request(key=request.key, operation="Delete", version=request.version))
+            response = stub.Delete(kvstore_pb2.Request(key=request.key, operation="Delete", version=request.version))
         else:
-            response = keyvalue_pb2.Response(result="Invalid operation", version=request.version)
+            response = kvstore_pb2.Response(result="Invalid operation", version=request.version)
         # 返回响应时包含版本信息
-        return keyvalue_pb2.Response(result=response.result, version=response.version)
+        return kvstore_pb2.Response(result=response.result, version=response.version)
 
     # 获取所有数据
     def RouteGetAllData(self, request, context):
@@ -75,21 +75,21 @@ class MiddlewareServer(keyvalue_pb2_grpc.MiddleWareServiceServicer):
                     nodeSource = "Primary Node" if random_node == primary_node else "Backup Node"
                     print(f"Route GetAll request to {random_node}   [{nodeSource}]")
                     channel = grpc.insecure_channel(f'{random_node}')
-                    stub = keyvalue_pb2_grpc.KVServiceStub(channel)
+                    stub = kvstore_pb2_grpc.KVServiceStub(channel)
                     response = self._forward_request(stub, request)
 
                     print("=====================================")
                     # 返回节点响应
-                    return keyvalue_pb2.AllDataResponse(data=response.data)
+                    return kvstore_pb2.AllDataResponse(data=response.data)
                 except grpc.RpcError as e:
                     print(f"Node {random_node} is down. Try to switch to other node...")
             print("All nodes are down. Unable to process the request.")
             print("=====================================")
-            return keyvalue_pb2.AllDataResponse(data={"All nodes are down": "Unable to process the request."})
+            return kvstore_pb2.AllDataResponse(data={"All nodes are down": "Unable to process the request."})
         else:
             print(f"Invalid operation: {request.operation}")
             print("=====================================")
-            return keyvalue_pb2.AllDataResponse(data={"Invalid operation": "Unable to process the request."})
+            return kvstore_pb2.AllDataResponse(data={"Invalid operation": "Unable to process the request."})
 
     # 路由请求
     def RouteRequest(self, request, context):
@@ -114,39 +114,39 @@ class MiddlewareServer(keyvalue_pb2_grpc.MiddleWareServiceServicer):
                     nodeSource = "Primary Node" if random_node == primary_node else "Backup Node"
                     print(f"Route {request.operation} request to {random_node}   [{nodeSource}]")
                     channel = grpc.insecure_channel(f'{random_node}')
-                    stub = keyvalue_pb2_grpc.KVServiceStub(channel)
+                    stub = kvstore_pb2_grpc.KVServiceStub(channel)
                     # 转发请求
                     response = self._forward_request(stub, request)
                     print("=====================================")
                     # 返回节点响应
-                    return keyvalue_pb2.Response(result=response.result, version=response.version)
+                    return kvstore_pb2.Response(result=response.result, version=response.version)
                 except grpc.RpcError as e:
                     print(f"Node {random_node} is down. Try to switch to other node...")
             print("All nodes are down. Unable to process the request.")
             print("=====================================")
-            return keyvalue_pb2.Response(result="All nodes are down", version=request.version)
+            return kvstore_pb2.Response(result="All nodes are down", version=request.version)
         # Set/Del请求：只能在主节点处理，如果节点宕机，则返回提示
         elif request.operation == 'Set' or request.operation == 'Delete':
             try:
                 print(f"Route request to primary node {primary_node}")
                 channel = grpc.insecure_channel(f'{primary_node}')
-                stub = keyvalue_pb2_grpc.KVServiceStub(channel)
+                stub = kvstore_pb2_grpc.KVServiceStub(channel)
                 # 转发请求
                 response = self._forward_request(stub, request)
                 print("=====================================")
                 # 返回主节点响应
-                return keyvalue_pb2.Response(result=response.result, version=response.version)
+                return kvstore_pb2.Response(result=response.result, version=response.version)
             except grpc.RpcError as e:
                 print(f"Primary node {primary_node} is down. Unable to process the request.")
                 print("=====================================")
-                return keyvalue_pb2.Response(result="Primary node is down. Unable to process the request.")
+                return kvstore_pb2.Response(result="Primary node is down. Unable to process the request.")
         else:
             print(f"Invalid operation: {request.operation}")
             # GetAll请求只能调用RouteGetAllData服务
             if request.operation == 'GetAll':
                 print("Please call RouteGetAllData service to get all data.")
             print("=====================================")
-            return keyvalue_pb2.Response(result="Invalid operation", version=request.version)
+            return kvstore_pb2.Response(result="Invalid operation", version=request.version)
 
 
 # 启动中间件服务器
@@ -156,7 +156,7 @@ def serverStart(nodes_, port_):
     print("Starting Middleware Server ...")
     try:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        keyvalue_pb2_grpc.add_MiddleWareServiceServicer_to_server(MiddlewareServer(nodes_), server)
+        kvstore_pb2_grpc.add_MiddleWareServiceServicer_to_server(MiddlewareServer(nodes_), server)
         server.add_insecure_port(f'localhost:{port_}')
         server.start()
         print(f"Middleware Server started at port {port_}")

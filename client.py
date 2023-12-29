@@ -1,9 +1,8 @@
 import time
 import grpc
-import keyvalue_pb2
-import keyvalue_pb2_grpc
+from lib import kvstore_pb2
+from lib import kvstore_pb2_grpc
 from datetime import datetime, timedelta
-import colorama
 
 
 # 用户数据缓存层
@@ -45,12 +44,12 @@ class KVClient:
     def __init__(self, port_):
         # 指向中间件服务器
         self.channel = grpc.insecure_channel(f'localhost:{port_}')
-        self.stub = keyvalue_pb2_grpc.MiddleWareServiceStub(self.channel)
+        self.stub = kvstore_pb2_grpc.MiddleWareServiceStub(self.channel)
         self.cache = Cache()
 
     # GetAll：直接发起getall请求
     def get_all(self):
-        response = self.stub.RouteGetAllData(keyvalue_pb2.Request(operation="GetAll"))
+        response = self.stub.RouteGetAllData(kvstore_pb2.Request(operation="GetAll"))
         # print(response)
         data_map = response.data  # 获取返回的 map 数据
 
@@ -65,7 +64,7 @@ class KVClient:
             # print(f"Get from cache: {cached_value.result}")
             return cached_value, "cache"
 
-        response = self.stub.RouteRequest(keyvalue_pb2.Request(key=key, operation="Get"))
+        response = self.stub.RouteRequest(kvstore_pb2.Request(key=key, operation="Get"))
         if response.result:
             self.cache.set_cache(key, response.result, response.version)
             # print(f"Get from server: {response.result}")
@@ -76,12 +75,13 @@ class KVClient:
     # 如果版本匹配，说明这段时间没有人在修改值，直接在服务段更新值，将返回数据再写入缓存
     # 如果不匹配，那么会从服务器获取最新的版本信息和值，然后与服务器同步。
     def set_value(self, key, value, retries=3):
+        response = None
         # 重试机制
         while retries > 0:
             version = self.cache.get_version_from_cache(key) if self.cache.get_version_from_cache(key) else 0
             # print(f"Current version: {version}")
             response = self.stub.RouteRequest(
-                keyvalue_pb2.Request(key=key, value=value, operation="Set", version=version))
+                kvstore_pb2.Request(key=key, value=value, operation="Set", version=version))
 
             if response.result == "Invalid operation":
                 print("Invalid operation")
@@ -101,7 +101,10 @@ class KVClient:
             self.cache.set_cache(key, response.result, response.version, ttl=10)  # 重新设置缓存
 
         # 重试次数用完，返回错误信息
-        return response.result
+        if response:
+            return response.result
+        else:
+            return "All nodes are down"
 
     # DELETE
     # 直接发起del请求，如果删除成功，则删除本地缓存
@@ -109,7 +112,7 @@ class KVClient:
     def del_value(self, key):
         # 获取本地缓存的版本信息
         version = self.cache.get_version_from_cache(key) if self.cache.get_version_from_cache(key) else 0
-        response = self.stub.RouteRequest(keyvalue_pb2.Request(key=key, operation="Delete", version=version))
+        response = self.stub.RouteRequest(kvstore_pb2.Request(key=key, operation="Delete", version=version))
 
         if response.result == "Delete operation success":
             self.cache.delete_from_cache(key)  # 仅当删除成功时才删除本地缓存
@@ -160,7 +163,7 @@ class KVClient:
                         get_result = self.get_value(key)
                         if get_result[0] == "All nodes are down":
                             print("All nodes are down! Please contact the administrator.")
-                        elif (get_result[0] == ""):
+                        elif get_result[0] == "":
                             print(f'{key} : Not exist     [ Get from {get_result[1]} ]')
                         else:
                             print(f'{key} : {get_result[0]}     [ Get from {get_result[1]} ]')
@@ -181,7 +184,6 @@ class KVClient:
                 print(f"An error occurred: {e}")
 
 
-
 # 交互式客户端 需要传入中间件服务器地址
 def ClientStart(port):
     print("=====================================")
@@ -191,6 +193,3 @@ def ClientStart(port):
     print("Client Start Success!")
     print("=====================================")
     client.terminalStart()
-
-
-

@@ -1,10 +1,10 @@
 from concurrent import futures
 import grpc
-import keyvalue_pb2
-import keyvalue_pb2_grpc
+from lib import kvstore_pb2
+from lib import kvstore_pb2_grpc
 
 
-class BackupServer(keyvalue_pb2_grpc.KVServiceServicer):
+class BackupServer(kvstore_pb2_grpc.KVServiceServicer):
     def __init__(self):
         self.backup_data = {}
         self.backup_versions = {}  # 添加版本信息的存储
@@ -17,8 +17,8 @@ class BackupServer(keyvalue_pb2_grpc.KVServiceServicer):
         try:
             # 连接到主服务器，获取最新数据
             with grpc.insecure_channel(self.primary_server_address) as channel:
-                stub = keyvalue_pb2_grpc.KVServiceStub(channel)
-                response = stub.GetAll(keyvalue_pb2.Request(operation="GetAll"))
+                stub = kvstore_pb2_grpc.KVServiceStub(channel)
+                response = stub.GetAll(kvstore_pb2.Request(operation="GetAll"))
                 # print(response.version)
                 # print(self.totalVersion)
                 if response.version > self.totalVersion:
@@ -49,7 +49,7 @@ class BackupServer(keyvalue_pb2_grpc.KVServiceServicer):
             print(f"Backup Set success: {request.key} : {request.value}")
             print("=====================================")
 
-            return keyvalue_pb2.Response(result="Backup success")
+            return kvstore_pb2.Response(result="Backup success")
         elif request.operation == 'Delete':
             if request.key in self.backup_data:
                 del self.backup_data[request.key]
@@ -63,15 +63,15 @@ class BackupServer(keyvalue_pb2_grpc.KVServiceServicer):
                 print("Backup Delete success: ", request.key)
                 print("=====================================")
 
-                return keyvalue_pb2.Response(result="Backup success")
+                return kvstore_pb2.Response(result="Backup success")
             else:
                 print("Backup Data Failed: Key not found")
                 print("=====================================")
-                return keyvalue_pb2.Response(result="Key not found in backup")
+                return kvstore_pb2.Response(result="Key not found in backup")
         else:
             print("Backup Data Failed: Invalid operation")
             print("=====================================")
-            return keyvalue_pb2.Response(result="Invalid operation")
+            return kvstore_pb2.Response(result="Invalid operation")
 
     # 在备份服务器中提供Get服务
     def Get(self, request, context):
@@ -79,12 +79,12 @@ class BackupServer(keyvalue_pb2_grpc.KVServiceServicer):
             value = self.backup_data[request.key]
             print(f"Get Value Sucess  {request.key} : {value}")
             print("=====================================")
-            return keyvalue_pb2.Response(result=self.backup_data[request.key],
+            return kvstore_pb2.Response(result=self.backup_data[request.key],
                                          version=self.backup_versions.get(request.key, 0))
         else:
             print("Get Value: Key not found")
             print("=====================================")
-            return keyvalue_pb2.Response(result="Key not found in backup")
+            return kvstore_pb2.Response(result="Key not found in backup")
 
     # 在备份服务器中提供GetAll服务
     def GetAll(self, request, context):
@@ -93,23 +93,23 @@ class BackupServer(keyvalue_pb2_grpc.KVServiceServicer):
         for key, value in self.backup_data.items():
             print(f"{key}: {value}")
             # 添加 AllDataResponse.Entry 条目
-            entries[key] = keyvalue_pb2.AllDataResponse.Entry(value=value, version=self.backup_versions[key])
+            entries[key] = kvstore_pb2.AllDataResponse.Entry(value=value, version=self.backup_versions[key])
 
         print("Get all data Success")
         print("=====================================")
 
         # 返回 AllDataResponse
-        return keyvalue_pb2.AllDataResponse(data=entries, version=self.totalVersion)
+        return kvstore_pb2.AllDataResponse(data=entries, version=self.totalVersion)
 
     def Set(self, request, context):
         print("Backup Server: Invalid operation")
         print("=====================================")
-        return keyvalue_pb2.Response(result="Invalid operation")
+        return kvstore_pb2.Response(result="Invalid operation")
 
     def Delete(self, request, context):
         print("Backup Server: Invalid operation")
         print("=====================================")
-        return keyvalue_pb2.Response(result="Invalid operation")
+        return kvstore_pb2.Response(result="Invalid operation")
 
 
 # 启动备份服务器
@@ -118,7 +118,7 @@ def backupServerStart(port):
     print("BackUp Server Start ...")
     try:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        keyvalue_pb2_grpc.add_KVServiceServicer_to_server(BackupServer(), server)
+        kvstore_pb2_grpc.add_KVServiceServicer_to_server(BackupServer(), server)
         server.add_insecure_port(f'localhost:{port}')
         server.start()
         print("Backup Server started at port " + str(port))
