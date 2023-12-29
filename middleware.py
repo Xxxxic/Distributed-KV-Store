@@ -59,25 +59,32 @@ class MiddlewareServer(keyvalue_pb2_grpc.MiddleWareServiceServicer):
     # 获取所有数据
     def RouteGetAllData(self, request, context):
         if request.operation == 'GetAll':
-            # 随机从主节点和备份节点中选择一个节点
             primary_node = self.hash.route(request.key)
-            backup_node_list = self.node_backup_map[primary_node]
-            backup_node_list.append(primary_node)
-            random_node = backup_node_list[random.randint(0, len(backup_node_list) - 1)]
-            source = "Primary Node" if random_node == primary_node else "Backup Node"
-            print(f"Route request to node: {random_node}   [{source}]")
 
-            try:
-                channel = grpc.insecure_channel(f'{random_node}')
-                stub = keyvalue_pb2_grpc.KVServiceStub(channel)
-                response = self._forward_request(stub, request)
-                return keyvalue_pb2.AllDataResponse(data=response.data)
-            except grpc.RpcError as e:
-                print(f"Node {random_node} is down. Unable to process the request!")
-                # TODO: 重试机制
+            # 随机从主备节点中选择一个节点
+            node_list = self.node_backup_map[primary_node]
+            node_list.append(primary_node)
+            random_idx = [i for i in range(len(node_list))]
+            # 若节点宕机，支持路由到其余节点
+            # 重试机制(DONE)
+            while len(random_idx) > 0:
+                idx = random_idx.pop(random.randint(0, len(random_idx) - 1))
+                # print(idx, len(random_idx), len(node_list))
+                random_node = node_list[idx]
+                try:
+                    nodeSource = "Primary Node" if random_node == primary_node else "Backup Node"
+                    print(f"Route GetAll request to node: {random_node}   [{nodeSource}]")
+                    channel = grpc.insecure_channel(f'{random_node}')
+                    stub = keyvalue_pb2_grpc.KVServiceStub(channel)
+                    response = self._forward_request(stub, request)
+                    return keyvalue_pb2.AllDataResponse(data=response.data)
+                except grpc.RpcError as e:
+                    print(f"Node {random_node} is down. Try to switch to other node...")
+            print("All nodes are down. Unable to process the request.")
+            return keyvalue_pb2.AllDataResponse(data={"All nodes are down": "Unable to process the request."})
         else:
             print(f"Invalid operation: {request.operation}")
-            return keyvalue_pb2.AllDataResponse(data={})
+            return keyvalue_pb2.AllDataResponse(data={"Invalid operation": "Unable to process the request."})
 
     # 路由请求
     def RouteRequest(self, request, context):
@@ -130,7 +137,6 @@ class MiddlewareServer(keyvalue_pb2_grpc.MiddleWareServiceServicer):
             if request.operation == 'GetAll':
                 print("Please call RouteGetAllData service to get all data.")
             return keyvalue_pb2.Response(result="Invalid operation", version=request.version)
-
 
 
 # 启动中间件服务器
