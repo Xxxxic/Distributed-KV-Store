@@ -1,6 +1,6 @@
 import grpc
 from concurrent import futures
-from lib import kvstore_pb2
+import kvstore_pb2
 from lib import kvstore_pb2_grpc
 
 
@@ -36,6 +36,7 @@ class KVServicer(kvstore_pb2_grpc.KVServiceServicer):
                             self.versions[key] = value.version
             except:
                 print(f"Backup server {address} is not available")
+        print("Get latest data Done")
 
     # 连接到备份服务器，并执行数据同步请求
     def sync_to_backup(self, operation, key, value=None, version=None):
@@ -116,12 +117,12 @@ class KVServicer(kvstore_pb2_grpc.KVServiceServicer):
 def serverStart(port, backup_add: list):
     print("=====================================")
     print("Server Start ...")
+    print(f"Server start at port: {port}")
     try:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         kvstore_pb2_grpc.add_KVServiceServicer_to_server(KVServicer(backup_add), server)
         server.add_insecure_port(f'localhost:{port}')
         server.start()
-        print(f"Server start at port: {port}")
         print("Server Start Success!")
         print("=====================================")
         server.wait_for_termination()

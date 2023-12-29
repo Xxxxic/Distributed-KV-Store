@@ -1,6 +1,6 @@
 import time
 import grpc
-from lib import kvstore_pb2
+import kvstore_pb2
 from lib import kvstore_pb2_grpc
 from datetime import datetime, timedelta
 
@@ -120,12 +120,12 @@ class KVClient:
 
     def terminalStart(self):
         help_text = """
-                    Commands Help:
-                    getall —— Get all (key, value) pairs
-                    get key —— Query (key, value) by the key
-                    set key value —— Generate/Modify (key, value)
-                    del key —— Delete (key, value) by the key
-                    """
+    Commands Help:
+    getall —— Get all (key, value) pairs
+    get key —— Query (key, value) by the key
+    set key value —— Generate/Modify (key, value)
+    del key —— Delete (key, value) by the key
+        """
         text = "\033[94mkvClient\033[0m "
         arrows = "\033[31m>\033[0m\033[32m>\033[0m\033[34m>\033[0m "
 
@@ -147,8 +147,10 @@ class KVClient:
                     if len(result) == 0:
                         print("No data found")
                         continue
+                    # 按照键值对的键排序
+                    sorted_data = dict(sorted(result.items()))
                     # 遍历 map
-                    for key, value in result.items():
+                    for key, value in sorted_data.items():
                         print(f'{key} : {value.value}')
                     # print(result)
                 elif command[0].lower() == "set":

@@ -1,15 +1,15 @@
 from concurrent import futures
 import grpc
-from lib import kvstore_pb2
+import kvstore_pb2
 from lib import kvstore_pb2_grpc
 
 
 class BackupServer(kvstore_pb2_grpc.KVServiceServicer):
-    def __init__(self):
+    def __init__(self, primary_server_address_="localhost:50001"):
         self.backup_data = {}
         self.backup_versions = {}  # 添加版本信息的存储
         self.totalVersion = 0
-        self.primary_server_address = "localhost:50001"
+        self.primary_server_address = primary_server_address_
         # 执行一次询问，获取最新版本信息
         self.GetLatestVersionData()
 
@@ -113,15 +113,16 @@ class BackupServer(kvstore_pb2_grpc.KVServiceServicer):
 
 
 # 启动备份服务器
-def backupServerStart(port):
+def backupServerStart(port, primary_server_address):
     print("=====================================")
     print("BackUp Server Start ...")
+    print("Backup Server started at port " + str(port))
+    print("Backup Of Primary Server: " + primary_server_address)
     try:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        kvstore_pb2_grpc.add_KVServiceServicer_to_server(BackupServer(), server)
+        kvstore_pb2_grpc.add_KVServiceServicer_to_server(BackupServer(primary_server_address), server)
         server.add_insecure_port(f'localhost:{port}')
         server.start()
-        print("Backup Server started at port " + str(port))
         print("BackUp Server Start Success!")
         print("=====================================")
         server.wait_for_termination()
