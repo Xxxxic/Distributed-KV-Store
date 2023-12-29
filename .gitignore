@@ -6,7 +6,6 @@
 dist
 build
 
-
 # My configurations:
-./lib/*.py
-./basci_version
+lib/*.py
+basci_version
