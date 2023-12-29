@@ -1,10 +1,9 @@
 import time
-
 import grpc
 import keyvalue_pb2
 import keyvalue_pb2_grpc
-
 from datetime import datetime, timedelta
+import colorama
 
 
 # 用户数据缓存层
@@ -116,86 +115,82 @@ class KVClient:
             self.cache.delete_from_cache(key)  # 仅当删除成功时才删除本地缓存
         return response.result
 
+    def terminalStart(self):
+        help_text = """
+                    Commands Help:
+                    getall —— Get all (key, value) pairs
+                    get key —— Query (key, value) by the key
+                    set key value —— Generate/Modify (key, value)
+                    del key —— Delete (key, value) by the key
+                    """
+        text = "\033[94mkvClient\033[0m "
+        arrows = "\033[31m>\033[0m\033[32m>\033[0m\033[34m>\033[0m "
 
-import readline
+        while True:
+            try:
+                cmd = input(f"{text}{arrows}")
 
+                command = cmd.split()  # 将命令拆分为列表
+                if not command:
+                    continue
+                if command[0].lower() == "quit" or command[0].lower() == "exit":  # 如果用户输入“退出”或“完毕”，则退出程序
+                    break
+                if command[0].lower() == "help":  # 如果用户输入"help"，打印命令帮助
+                    print(help_text)
+                    continue
 
-# 自定义补全方法
-def complete(text, state):
-    commands = ["get", "set", "del", "getall", "help", "quit", "exit"]  # 命令列表
-    options = [cmd for cmd in commands if cmd.startswith(text)]
-    return options[state] if state < len(options) else None
+                if command[0].lower() == "getall":
+                    result = self.get_all()
+                    if len(result) == 0:
+                        print("No data found")
+                        continue
+                    # 遍历 map
+                    for key, value in result.items():
+                        print(f'{key} : {value.value}')
+                    # print(result)
+                elif command[0].lower() == "set":
+                    if len(command) != 3:
+                        print("Invalid command. Usage: set key value")
+                        continue
+                    _, key, value = command
+                    print(self.set_value(key, value))
+                elif command[0].lower() == "get":
+                    keys = command[1:]
+                    for key in keys:
+                        get_result = self.get_value(key)
+                        if get_result[0] == "All nodes are down":
+                            print("All nodes are down! Please contact the administrator.")
+                        elif (get_result[0] == ""):
+                            print(f'{key} : Not exist     [ Get from {get_result[1]} ]')
+                        else:
+                            print(f'{key} : {get_result[0]}     [ Get from {get_result[1]} ]')
+                elif command[0].lower() == "del":
+                    keys = command[1:]
+                    for key in keys:
+                        print(self.del_value(key))
+                else:
+                    print("Invalid command. Please type 'help' to get help.")
 
+            # except KeyboardInterrupt:  # Handling Ctrl+C to prevent abrupt exit
+            #     print("\nUse 'quit' or 'exit' to exit the program.")
+            #     continue
+            except EOFError:  # Handling Ctrl+D to exit the program
+                print("\nExiting program...")
+                break
+            except Exception as e:
+                print(f"An error occurred: {e}")
 
-readline.parse_and_bind("tab: complete")  # 使用Tab键进行补全
-readline.set_completer(complete)  # 设置补全方法
-
-history = []  # 存储历史命令
-
-help_text = """
-        Commands Help:
-        getall —— Get all (key, value) pairs
-        get key —— Query (key, value) by the key
-        set key value —— Generate/Modify (key, value)
-        del key —— Delete (key, value) by the key
-        """
 
 
 # 交互式客户端 需要传入中间件服务器地址
 def ClientStart(port):
+    print("=====================================")
+    print("Client Start ...")
     client = KVClient(50003)
+    print(f"Client start at port: {port}")
+    print("Client Start Success!")
+    print("=====================================")
+    client.terminalStart()
 
-    while True:
-        # 用readline获取输入
-        cmd = input("> ")
-        history.append(cmd)  # 将命令添加到历史记录
 
-        command = cmd.split()  # 将命令拆分为列表
-        if not command:
-            continue
-        if command[0].lower() == "quit" or command[0].lower() == "exit":  # 如果用户输入“退出”或“完毕”，则退出程序
-            break
-        if command[0].lower() == "help":  # 如果用户输入"help"，打印命令帮助
-            print(help_text)
-            continue
 
-        if command[0].lower() == "getall":
-            result = client.get_all()
-            if len(result) == 0:
-                print("No data found")
-                continue
-            # 遍历 map
-            for key, value in result.items():
-                print(f'{key} : {value.value}')
-            # print(result)
-        elif command[0].lower() == "set":
-            if len(command) != 3:
-                print("Invalid command. Usage: set key value")
-                continue
-            _, key, value = command
-            print(client.set_value(key, value))
-        elif command[0].lower() == "get":
-            keys = command[1:]
-            for key in keys:
-                get_result = client.get_value(key)
-                if get_result[0] == "All nodes are down":
-                    print("All nodes are down! Please contact the administrator.")
-                elif (get_result[0] == ""):
-                    print(f'{key} : Not exist     [ Get from {get_result[1]} ]')
-                else:
-                    print(f'{key} : {get_result[0]}     [ Get from {get_result[1]} ]')
-        elif command[0].lower() == "del":
-            keys = command[1:]
-            for key in keys:
-                print(client.del_value(key))
-        else:
-            print("Invalid command. Please type 'help' to get help.")
-
-    # except KeyboardInterrupt:  # Handling Ctrl+C to prevent abrupt exit
-    #     print("\nUse 'quit' or 'exit' to exit the program.")
-    #     continue
-    # except EOFError:  # Handling Ctrl+D to exit the program
-    #     print("\nExiting program...")
-    #     break
-    # except Exception as e:
-    #     print(f"An error occurred: {e}")
