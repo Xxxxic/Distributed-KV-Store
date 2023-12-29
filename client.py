@@ -117,10 +117,7 @@ class KVClient:
         return response.result
 
 
-# 交互式客户端 需要传入中间件服务器地址
-def ClientStart(port):
-    client = KVClient(50003)
-    help_text = """
+help_text = """
         Commands Help:
         getall —— Get all (key, value) pairs
         get key —— Query (key, value) by the key
@@ -128,28 +125,36 @@ def ClientStart(port):
         del key —— Delete (key, value) by the key
         """
 
+# 交互式客户端 需要传入中间件服务器地址
+def ClientStart(port):
+    client = KVClient(50003)
+
     while True:
-        command = input("Enter command: ").split()  # 等待用户输入并将其拆分为列表
+        # 用readline获取输入
+        cmd = input("> ")
+
+        command = cmd.split()  # 将命令拆分为列表
         if not command:
             continue
-        if command[0] == "quit" or command[0] == "exit":  # 如果用户输入“退出”或“完毕”，则退出程序
+        if command[0].lower() == "quit" or command[0].lower() == "exit":  # 如果用户输入“退出”或“完毕”，则退出程序
             break
-        if command[0] == "help":  # 如果用户输入"help"，打印命令帮助
+        if command[0].lower() == "help":  # 如果用户输入"help"，打印命令帮助
             print(help_text)
             continue
-        if command[0] == "getall":
+
+        if command[0].lower() == "getall":
             result = client.get_all()
             # 遍历 map
             for key, value in result.items():
                 print(f'{key} : {value.value}')
             # print(result)
-        elif command[0] == "set":
+        elif command[0].lower() == "set":
             if len(command) != 3:
                 print("Invalid command. Usage: set key value")
                 continue
             _, key, value = command
             print(client.set_value(key, value))
-        elif command[0] == "get":
+        elif command[0].lower() == "get":
             keys = command[1:]
             for key in keys:
                 get_result = client.get_value(key)
@@ -159,9 +164,18 @@ def ClientStart(port):
                     print(f'{key} : Not exist     [ Get from {get_result[1]} ]')
                 else:
                     print(f'{key} : {get_result[0]}     [ Get from {get_result[1]} ]')
-        elif command[0] == "del":
+        elif command[0].lower() == "del":
             keys = command[1:]
             for key in keys:
                 print(client.del_value(key))
         else:
             print("Invalid command. Please type 'help' to get help.")
+
+    # except KeyboardInterrupt:  # Handling Ctrl+C to prevent abrupt exit
+    #     print("\nUse 'quit' or 'exit' to exit the program.")
+    #     continue
+    # except EOFError:  # Handling Ctrl+D to exit the program
+    #     print("\nExiting program...")
+    #     break
+    # except Exception as e:
+    #     print(f"An error occurred: {e}")
