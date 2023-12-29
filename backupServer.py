@@ -84,7 +84,7 @@ class BackupServer(kvstore_pb2_grpc.KVServiceServicer):
         else:
             print("Get Value: Key not found")
             print("=====================================")
-            return kvstore_pb2.Response(result="Key not found in backup")
+            return kvstore_pb2.Response(result="Not exist")
 
     # 在备份服务器中提供GetAll服务
     def GetAll(self, request, context):
