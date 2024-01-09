@@ -1,6 +1,6 @@
 from concurrent import futures
 import grpc
-import kvstore_pb2
+from lib import kvstore_pb2
 from lib import kvstore_pb2_grpc
 
 

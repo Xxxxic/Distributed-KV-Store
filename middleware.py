@@ -1,6 +1,6 @@
 import random
 import grpc
-import kvstore_pb2
+from lib import kvstore_pb2
 from lib import kvstore_pb2_grpc
 from concurrent import futures
 import hashlib
@@ -55,6 +55,19 @@ class MiddlewareServer(kvstore_pb2_grpc.MiddleWareServiceServicer):
             response = kvstore_pb2.Response(result="Invalid operation", version=request.version)
         # 返回响应时包含版本信息
         return kvstore_pb2.Response(result=response.result, version=response.version)
+
+    def RouteLogin(self, request, context):
+        responses = []
+        for node in self.nodes:
+            # print(f"Route Login request to {node}")
+            channel = grpc.insecure_channel(node)
+            stub = kvstore_pb2_grpc.KVServiceStub(channel)
+            # 将登录信息发送到每个服务器，并收集它们的响应
+            response = stub.Login(request)
+            responses.append(response)
+
+        # 出于简化考虑，只返回第一个响应，需要更详细的错误检查和处理
+        return responses[0]
 
     # 获取所有数据
     def RouteGetAllData(self, request, context):

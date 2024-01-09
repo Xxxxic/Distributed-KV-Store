@@ -3,6 +3,7 @@ syntax = "proto3";
 service MiddleWareService {
     rpc RouteRequest(Request) returns (Response) {}
     rpc RouteGetAllData(Request) returns (AllDataResponse) {}
+    rpc RouteLogin(LoginRequest) returns (LoginResponse) {}   // 新增登录转发路由
 }
 
 service KVService {
@@ -11,6 +12,7 @@ service KVService {
     rpc GetAll(Request) returns (AllDataResponse) {}
     rpc Delete(Request) returns (Response) {}
     rpc BackupData(Request) returns (Response) {}
+    rpc Login(LoginRequest) returns (LoginResponse) {}   // 新增登录方法
 }
 
 message Request {
@@ -18,6 +20,20 @@ message Request {
     string value = 2;
     string operation = 3;
     uint64 version = 4;     // 添加版本信息
+    string user = 5;    // 添加用户字段
+    string token = 6;   // 添加令牌字段
+}
+
+// 登录的请求需要用户名和密码
+message LoginRequest {
+    string user = 1;
+    string password = 2;
+}
+
+// 登录的响应将返回一个令牌
+message LoginResponse {
+    string result = 1;
+    string token = 2;
 }
 
 message Response {

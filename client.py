@@ -1,6 +1,6 @@
 import time
 import grpc
-import kvstore_pb2
+from lib import kvstore_pb2
 from lib import kvstore_pb2_grpc
 from datetime import datetime, timedelta
 
@@ -46,6 +46,25 @@ class KVClient:
         self.channel = grpc.insecure_channel(f'localhost:{port_}')
         self.stub = kvstore_pb2_grpc.MiddleWareServiceStub(self.channel)
         self.cache = Cache()
+
+        self.user = "admin"
+        self.token = None
+
+    def login(self):
+        print("Please \033[94mLogin\033[0m First")
+        while True:
+            username = input("Input your username: ")
+            password = input("Input your password: ")
+            response = self.stub.RouteLogin(
+                kvstore_pb2.LoginRequest(user=username, password=password)
+            )
+            if response.result == "登录成功":
+                self.token = response.token
+                print(f"\033[32mLogin success")
+                print("\033[0m=======================================")
+                break
+            else:
+                print(f"\033[35mLogin failed\033[0m: {response.result}, Please try again")
 
     # GetAll：直接发起getall请求
     def get_all(self):
@@ -184,6 +203,7 @@ class KVClient:
                 break
             except Exception as e:
                 print(f"An error occurred: {e}")
+                print("Please try again or Restart the program.")
 
 
 # 交互式客户端 需要传入中间件服务器地址
@@ -194,4 +214,5 @@ def ClientStart(port):
     print(f"Client start at port: {port}")
     print("Client Start Success!")
     print("=====================================")
+    client.login()
     client.terminalStart()
