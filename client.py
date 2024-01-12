@@ -1,7 +1,7 @@
 import time
 import grpc
-from lib import kvstore_pb2
-from lib import kvstore_pb2_grpc
+import kvstore_pb2
+import kvstore_pb2_grpc
 from datetime import datetime, timedelta
 
 
