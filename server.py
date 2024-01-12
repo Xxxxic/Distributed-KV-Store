@@ -68,12 +68,15 @@ class KVServicer(kvstore_pb2_grpc.KVServiceServicer):
     def sync_to_backup(self, operation, key, value=None, version=None):
         # 遍历所有备份服务器
         for address in self.backup_server_address:
-            with grpc.insecure_channel(address) as channel:
-                stub = kvstore_pb2_grpc.KVServiceStub(channel)
-                response = stub.BackupData(
-                    kvstore_pb2.Request(operation=operation, key=key, value=value, version=version)
-                )
-                print(f'Backup to {address}, response: {response.result}')
+            try:
+                with grpc.insecure_channel(address) as channel:
+                    stub = kvstore_pb2_grpc.KVServiceStub(channel)
+                    response = stub.BackupData(
+                        kvstore_pb2.Request(operation=operation, key=key, value=value, version=version)
+                    )
+                    print(f'Backup to {address}, response: {response.result}')
+            except:
+                print(f"Backup server {address} is not available")
 
     def Set(self, request, context):
         # if not self.check_token(request.user, request.token):
