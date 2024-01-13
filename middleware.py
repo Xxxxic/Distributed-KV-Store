@@ -70,7 +70,6 @@ class MiddlewareServer(kvstore_pb2_grpc.MiddleWareServiceServicer):
         return responses[0]
 
     # 获取所有数据
-    # 获取所有数据
     def RouteGetAllData(self, request, context):
         if request.operation == 'GetAll':
             final_result = {}
