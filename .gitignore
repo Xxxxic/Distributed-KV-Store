@@ -11,4 +11,5 @@ lib/*.py
 kvstore_pb2.py
 kvstore_pb2_grpc.py
 .idea
-basci_version
+basic_version
+README_CN.md
